@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <Reference Include="WpfHelper">
-      <HintPath>..\..\..\..\..\GitHub\WpfHelper\WpfHelper\bin\Release\netcoreapp3.1\WpfHelper.dll</HintPath>
+      <HintPath>..\..\WpfHelper.dll</HintPath>
     </Reference>
   </ItemGroup>
 
