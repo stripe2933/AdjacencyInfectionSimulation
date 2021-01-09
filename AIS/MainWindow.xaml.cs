@@ -18,7 +18,7 @@ namespace AIS
         const int PERIOD = 60;
 
         const int INITIAL_INFECTEE = 5; // 초기 감염자 수입니다. Number of initial infected people.
-        const int POPULATION = 1000; // 총 인구수입니다. Total population of group.
+        const int POPULATION = 10000; // 총 인구수입니다. Total population of group.
         const double MOVING_DIST_MEAN = 0.001; // 각 사람의 이동 거리에 대한 정규분포의 평균입니다. Mean for normal distribution of each person's moving distance.
         const double MOVING_DIST_STD = 0.003; // 각 사람의 이동 거리에 대한 정규분포의 표준편차입니다. Standard deviation for normal distrubution of each person's moving distance.
         const double INFECTION_DIST = 0.01; // 감염되는 최소한의 거리입니다. Minimum distance of infection.
@@ -106,8 +106,8 @@ namespace AIS
 
             for (int i = 0; i < Population; ++i)
                 _people[i] = new Person(_random.NextDouble(), _random.NextDouble());
-            foreach (int idx in _random.Permutation(Population, Infected))
-                _people[idx - 1].Infected = true;
+            for (int i = 0; i < Infected; ++i)
+                _people[i].Infected = true;
         }
 
         private void CalculateFPS()
@@ -193,7 +193,7 @@ namespace AIS
             for (int i = 0; i < firstNoninfectiveOccurIndex; ++i) // 감염인 대상 이웃 탐색. Search neighbor nears infectee.
             {
                 var infecteePivot = _people[i];
-                
+
                 int rangeLeft = Array.BinarySearch(_peopleX, firstNoninfectiveOccurIndex, POPULATION - firstNoninfectiveOccurIndex, infecteePivot.X - INFECTION_DIST);
                 if (rangeLeft < 0)
                     rangeLeft = ~rangeLeft;
