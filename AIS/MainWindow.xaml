@@ -1,0 +1,41 @@
+﻿<Window x:Class="AIS.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:skia="clr-namespace:SkiaSharp.Views.WPF;assembly=SkiaSharp.Views.WPF"
+        xmlns:local="clr-namespace:AIS"
+        mc:Ignorable="d"
+        Title="Adjacency Infection Simulation" Height="450" Width="800" DataContext="{Binding RelativeSource={RelativeSource Self}}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border BorderBrush="Black" BorderThickness="1" Margin="4,4,4,0">
+            <skia:SKElement x:Name="skElement" PaintSurface="skElement_PaintSurface"/>
+        </Border>
+
+        <TextBlock Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="4">
+            <Run Text="Infected:"/>
+            <Run Text="{Binding Infected}"/>
+            <Run Text="{Binding Population, Mode=OneTime, StringFormat=/ {0}}"/>
+            <Run Text="{Binding FPS, StringFormat=FPS: {0}}"/>
+        </TextBlock>
+        <Button Grid.Row="1" Content="Load" Width="60" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="4,4,68,4" Command="{Binding LoadPopulationCommand}"/>
+        <Button Grid.Row="1" Width="60" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="4" Command="{Binding RunSimulationCommand}">
+            <Button.Style>
+                <Style TargetType="Button">
+                    <Setter Property="Content" Value="Run"/>
+
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Running}" Value="True">
+                            <Setter Property="Content" Value="Pause"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+    </Grid>
+</Window>
