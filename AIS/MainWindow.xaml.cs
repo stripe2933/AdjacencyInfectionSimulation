@@ -44,6 +44,8 @@ namespace AIS
         private Person[] _people = new Person[POPULATION];
         private double[] _peopleX = new double[POPULATION];
 
+        private int _prevInfected = INITIAL_INFECTEE;
+
         private bool _isLoaded = false;
 
         #endregion
@@ -108,6 +110,7 @@ namespace AIS
                 _people[i] = new Person(_random.NextDouble(), _random.NextDouble());
             for (int i = 0; i < Infected; ++i)
                 _people[i].Infected = true;
+
         }
 
         private void CalculateFPS()
@@ -154,68 +157,129 @@ namespace AIS
                 _people[i].X += pivot.Vx;
                 _people[i].Y += pivot.Vy;
 
-                if (pivot.X < 0.0 && pivot.Vx < 0)
+                if (pivot.X < 0 && pivot.Vx < 0)
                 {
                     _people[i].X = -pivot.X;
                     _people[i].Vx = -pivot.Vx;
                 }
                 else if (pivot.X > 1 && pivot.Vx > 0)
                 {
-                    _people[i].X = 2.0 - pivot.X;
+                    _people[i].X = 2 - pivot.X;
                     _people[i].Vx = -pivot.Vx;
                 }
 
-                if (pivot.Y < 0.0 && pivot.Vy < 0)
+                if (pivot.Y < 0 && pivot.Vy < 0)
                 {
                     _people[i].Y = -pivot.Y;
                     _people[i].Vy = -pivot.Vy;
                 }
                 else if (pivot.Y > 1 && pivot.Vy > 0)
                 {
-                    _people[i].Y = 2.0 - pivot.Y;
+                    _people[i].Y = 2 - pivot.Y;
                     _people[i].Vy = -pivot.Vy;
                 }
             }
         }
 
-        private void CalculateInfection() // O(nlog n)
+        private void CalculateInfection()
         {
-            // 정렬 순서: 1. 감염인이 비감염인보다 우선으로 2. X좌표가 오름차순으로
-            // Sorting order: 1. noninfective first 2. ascending x-coords order
-            Array.Sort(_people, (p1, p2) => p1.Infected != p2.Infected ? p2.Infected.CompareTo(p1.Infected) : p1.X.CompareTo(p2.X));
-            int firstNoninfectiveOccurIndex = Infected;
-
-            // 왜 LINQ를 쓰지 않습니까? Why do not using Linq?
-            // 새로운 인스턴스 생성으로 인한 GC의 발생을 막기 위함. Avoid to invoke GC from creating new instance.
-            for (int i = 0; i < POPULATION; ++i)
-                _peopleX[i] = _people[i].X;
-
-            for (int i = 0; i < firstNoninfectiveOccurIndex; ++i) // 감염인 대상 이웃 탐색. Search neighbor nears infectee.
+            // 방법 1. 알고리즘 이용
+            // Method 1. Using algorithm
             {
-                var infecteePivot = _people[i];
+                // 이미 _people은 앞부분은 감염인, 뒷부분은 비감염인으로 정렬된 상태. _people already sorted with infectees in front section, and non-infectives in back section.
+                // 이진 탐색은 비감염인에 대해서만 실행하므로 정렬은 비감염인만을 대상으로 함. Sort is for only non-infectees since binary search processed within non-infectees.
+                // 정렬 순서: 1. 감염인이 비감염인보다 우선으로 2. X좌표가 오름차순으로
+                // Sorting order: 1. noninfective first 2. ascending x-coords order
+                Array.Sort(_people, _prevInfected, POPULATION - _prevInfected);
+                _prevInfected = Infected;
 
-                int rangeLeft = Array.BinarySearch(_peopleX, firstNoninfectiveOccurIndex, POPULATION - firstNoninfectiveOccurIndex, infecteePivot.X - INFECTION_DIST);
-                if (rangeLeft < 0)
-                    rangeLeft = ~rangeLeft;
-                int rangeRight = Array.BinarySearch(_peopleX, firstNoninfectiveOccurIndex, POPULATION - firstNoninfectiveOccurIndex, infecteePivot.X + INFECTION_DIST);
-                if (rangeRight < 0)
-                    rangeRight = ~rangeRight;
+                // 왜 LINQ를 쓰지 않습니까? Why do not using Linq?
+                // 새로운 인스턴스 생성으로 인한 GC의 발생을 막기 위함. Avoid to invoke GC from creating new instance.
+                for (int i = _prevInfected; i < POPULATION; ++i)
+                    _peopleX[i] = _people[i].X;
 
-                for (int j = rangeLeft; j < rangeRight; ++j)
+                for (int i = 0; i < _prevInfected; ++i) // 감염인 대상 이웃 탐색. Search neighbor nears infectee.
                 {
-                    var adjacencyPivot = _people[j];
-                    if (adjacencyPivot.Infected)
-                        continue;
+                    var infecteePivot = _people[i];
 
-                    double x = adjacencyPivot.X - infecteePivot.X;
-                    double y = adjacencyPivot.Y - infecteePivot.Y;
-                    if (_random.NextDouble() < INFECTION_PROB && x * x + y * y < INFECTION_DIST_SQUARE)
+                    int rangeLeft = Array.BinarySearch(_peopleX, _prevInfected, POPULATION - _prevInfected, infecteePivot.X - INFECTION_DIST);
+                    if (rangeLeft < 0)
+                        rangeLeft = ~rangeLeft;
+                    int rangeRight = Array.BinarySearch(_peopleX, _prevInfected, POPULATION - _prevInfected, infecteePivot.X + INFECTION_DIST);
+                    if (rangeRight < 0)
+                        rangeRight = ~rangeRight;
+
+                    for (int j = rangeLeft; j < rangeRight; ++j)
                     {
-                        _people[j].Infected = true;
-                        Infected++;
+                        var adjacencyPivot = _people[j];
+                        if (adjacencyPivot.Infected)
+                            continue;
+
+                        double x = adjacencyPivot.X - infecteePivot.X;
+                        double y = adjacencyPivot.Y - infecteePivot.Y;
+                        if (_random.NextDouble() < INFECTION_PROB && x * x + y * y < INFECTION_DIST_SQUARE)
+                        {
+                            _people[j].Infected = true;
+                            Infected++;
+                        }
                     }
                 }
             }
+
+            // 방법 2. Brute-force
+            // Method 2. Brute-force
+            //{
+            //    for (int i = 0; i < POPULATION; ++i)
+            //    {
+            //        var infecteepivot = _people[i];
+            //        if (infecteepivot.Infected)
+            //        {
+            //            for (int j = 0; j < POPULATION; ++j)
+            //            {
+            //                if (i == j)
+            //                    continue;
+            //                var pivot = _people[j];
+            //                if (pivot.Infected)
+            //                    continue;
+
+            //                double x = pivot.X - infecteepivot.X;
+            //                double y = pivot.Y - infecteepivot.Y;
+            //                if (x * x + y * y < INFECTION_DIST_SQUARE)
+            //                {
+            //                    _people[j].Infected = true;
+            //                    Infected++;
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+
+            // 방법 3. 혼합
+            // Method 3. Mixture
+            //{
+            //    Array.Sort(_people, _prevInfected, POPULATION - _prevInfected);
+            //    _prevInfected = Infected;
+
+            //    for (int i = 0; i < _prevInfected; ++i)
+            //    {
+            //        var infecteePivot = _people[i];
+
+            //        for (int j = Infected; j < POPULATION; ++j)
+            //        {
+            //            var pivot = _people[j];
+            //            if (pivot.Infected)
+            //                continue;
+
+            //            double x = pivot.X - infecteePivot.X;
+            //            double y = pivot.Y - infecteePivot.Y;
+            //            if (x * x + y * y < INFECTION_DIST_SQUARE)
+            //            {
+            //                _people[j].Infected = true;
+            //                Infected++;
+            //            }
+            //        }
+            //    }
+            //}
 
             OnPropertyChanged("Infected");
         }
@@ -245,15 +309,12 @@ namespace AIS
 
             canvas.Clear();
 
-            for (int i = 0; i < Infected; ++i) // 감염인 infectee
+            foreach (var pivot in _people)
             {
-                var infecteePivot = _people[i];
-                canvas.DrawCircle(info.Width * (float)infecteePivot.X, info.Height * (float)infecteePivot.Y, 2, _redPaint);
-            }
-            for (int i = Infected; i < POPULATION; ++i) // 비감염인 non-infective
-            {
-                var noninfectivePivot = _people[i];
-                canvas.DrawCircle(info.Width * (float)noninfectivePivot.X, info.Height * (float)noninfectivePivot.Y, 2, _blackPaint);
+                if (pivot.Infected)
+                    canvas.DrawCircle(info.Width * (float)pivot.X, info.Height * (float)pivot.Y, 2, _redPaint);
+                else
+                    canvas.DrawCircle(info.Width * (float)pivot.X, info.Height * (float)pivot.Y, 2, _blackPaint);
             }
         }
 

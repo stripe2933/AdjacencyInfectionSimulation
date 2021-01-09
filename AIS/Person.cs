@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 
 namespace AIS
 {
@@ -23,6 +22,7 @@ namespace AIS
         public int CompareTo(Person other)
         {
             return Infected != other.Infected ? other.Infected.CompareTo(Infected) : X.CompareTo(other.X);
+            //return other.Infected.CompareTo(Infected);
         }
     }
 }
